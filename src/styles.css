@@ -220,7 +220,7 @@ input {
 }
 .workspace {
   display: grid;
-  grid-template-columns: 240px 16px minmax(0, 1fr);
+  grid-template-columns: var(--device-list-width, 240px) 16px minmax(0, 1fr);
   min-height: 0;
   margin-left: 8px;
 }
@@ -229,6 +229,15 @@ input {
   background: #fff;
   min-height: 0;
   padding: 0 4px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #cfd2dc transparent;
+}
+.device-items {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   scrollbar-width: thin;
   scrollbar-color: #cfd2dc transparent;
@@ -347,6 +356,126 @@ input {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  cursor: col-resize;
+  touch-action: none;
+  outline: none;
+}
+.splitter:before {
+  content: "";
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 6px;
+  width: 4px;
+  border-radius: 2px;
+  background: transparent;
+  transition: background-color 120ms ease;
+}
+.splitter:hover:before,
+.splitter:focus-visible:before,
+.workspace.is-resizing .splitter:before {
+  background: #99c2ff;
+}
+.splitter .icon {
+  position: relative;
+  z-index: 1;
+}
+.workspace.is-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+.device-table-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #cfd2dc transparent;
+}
+.device-table {
+  display: flex;
+  flex-direction: column;
+  min-width: 1760px;
+  min-height: 100%;
+  background: #fff;
+}
+.device-table-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(11, 160px);
+  grid-template-rows: 24px 24px;
+  min-height: 48px;
+  color: #6c7393;
+  background: #fff;
+  border-bottom: 1px solid #dedee3;
+  font-size: 12px;
+  line-height: 16px;
+}
+.device-table-head > span {
+  grid-column: var(--column);
+  grid-row: 2;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 4px 8px;
+  border-left: 1px solid #dedee3;
+  white-space: nowrap;
+}
+.device-table-head > .first-column,
+.device-table-head > .content-updates {
+  border-left: 0;
+}
+.device-table-head > .ungrouped {
+  grid-row: 1 / 3;
+  align-items: flex-end;
+}
+.device-table-head > .content-updates {
+  grid-column: 5 / 9;
+  grid-row: 1;
+  padding: 4px 8px;
+  color: #16171d;
+  font-weight: 600;
+}
+.device-table-row {
+  display: grid;
+  grid-template-columns: repeat(11, 160px);
+  width: 1760px;
+  height: 40px;
+  min-height: 40px;
+  border-bottom: 1px solid #f0f1f4;
+  border-radius: 8px;
+  text-align: left;
+}
+.device-table-row.selected {
+  background: #e5efff;
+}
+.device-table-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 40px;
+  padding: 4px 8px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.device-table-cell > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.device-table-cell:first-child > span {
+  font-weight: 600;
+}
+.device-table-footer {
+  margin-top: auto;
+  height: 40px;
+  min-height: 40px;
+  padding: 12px 24px;
+  color: #6d7276;
+  border-top: 1px solid #f0f1f4;
+  font-size: 12px;
 }
 .device-panel {
   background: #fff;
@@ -450,10 +579,14 @@ input {
   scrollbar-color: #dedee3 transparent;
 }
 .nav-summary {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
   height: 46px;
+  background: var(--surface);
   border-bottom: 1px solid #e2e3e9;
   margin-bottom: 6px;
 }
@@ -1092,7 +1225,7 @@ input {
     grid-template-columns: 64px minmax(0, 1fr);
   }
   .app:not(.reference-mode) .workspace {
-    grid-template-columns: 220px 16px minmax(0, 1fr);
+    grid-template-columns: var(--device-list-width, 220px) 16px minmax(0, 1fr);
   }
   .app:not(.reference-mode) .hide-devices {
     grid-template-columns: minmax(0, 1fr);
@@ -1206,7 +1339,7 @@ input {
 }
 @media (max-width: 900px) {
   .app:not(.reference-mode) .workspace {
-    grid-template-columns: 180px 12px minmax(0, 1fr);
+    grid-template-columns: var(--device-list-width, 180px) 12px minmax(0, 1fr);
     margin-left: 0;
   }
   .app:not(.reference-mode) .hide-devices {
@@ -1379,7 +1512,7 @@ input {
     padding: 8px 0;
   }
   .app:not(.reference-mode) .workspace {
-    grid-template-columns: 200px 12px minmax(0, 1fr);
+    grid-template-columns: var(--device-list-width, 200px) 12px minmax(0, 1fr);
   }
   .app:not(.reference-mode) .hide-devices {
     grid-template-columns: minmax(0, 1fr);

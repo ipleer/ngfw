@@ -35,6 +35,19 @@ const initialDevices = [
   "NGFW-05",
   "NGFW-06",
 ];
+const deviceTableColumns = [
+  "Name",
+  "State",
+  "Model",
+  "MGMT address",
+  "Antivirus",
+  "Applications",
+  "GeoIP",
+  "IPS",
+  "Product version",
+  "Software version",
+  "Edited",
+];
 const groups = [
   { name: "Virtual contexts", children: ["System"] },
   { name: "Interfaces" },
@@ -270,6 +283,9 @@ export function App() {
     [navCollapsed, setNavCollapsed] = useState(false),
     [hideDevices, setHideDevices] = useState(false),
     [expanded, setExpanded] = useState(false);
+  const [devicePaneWidth, setDevicePaneWidth] = useState(240),
+    [viewportWidth, setViewportWidth] = useState(() => window.innerWidth),
+    [resizing, setResizing] = useState(false);
   const [popover, setPopover] = useState(false),
     [dialog, setDialog] = useState(null),
     [deviceName, setDeviceName] = useState(""),
@@ -277,10 +293,13 @@ export function App() {
     [scope, setScope] = useState("Global"),
     [toast, setToast] = useState("");
   const popoverRef = useRef(null),
+    workspaceRef = useRef(null),
     closeDialog = () => {
       setDialog(null);
       setError("");
     };
+  const getDevicePaneMax = () =>
+    Math.max(180, (workspaceRef.current?.clientWidth ?? viewportWidth) - 496);
   useEffect(() => {
     function key(e) {
       if (e.key === "Escape") {
@@ -308,6 +327,36 @@ export function App() {
     const id = setTimeout(() => setToast(""), 3500);
     return () => clearTimeout(id);
   }, [toast]);
+  useEffect(() => {
+    function resize() {
+      setViewportWidth(window.innerWidth);
+      const workspaceWidth = workspaceRef.current?.clientWidth;
+      if (!workspaceWidth) return;
+      setDevicePaneWidth((width) => Math.min(width, getDevicePaneMax()));
+    }
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, []);
+  useEffect(() => {
+    if (!resizing) return;
+    function move(e) {
+      const rect = workspaceRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const max = Math.max(180, rect.width - 496);
+      setDevicePaneWidth(Math.min(max, Math.max(180, e.clientX - rect.left)));
+    }
+    function stop() {
+      setResizing(false);
+    }
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", stop, { once: true });
+    window.addEventListener("pointercancel", stop, { once: true });
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", stop);
+      window.removeEventListener("pointercancel", stop);
+    };
+  }, [resizing]);
   const filtered = devices.filter(
     (n) =>
       n.toLowerCase().includes(search.toLowerCase()) &&
@@ -317,6 +366,11 @@ export function App() {
           : !n.startsWith("Cluster"))),
   );
   if (sort) filtered.sort((a, b) => a.localeCompare(b));
+  const tableMode = viewportWidth > 600 && devicePaneWidth >= viewportWidth * 0.3;
+  const resizeDevicePaneBy = (delta) => {
+    const max = getDevicePaneMax();
+    setDevicePaneWidth((width) => Math.min(max, Math.max(180, width + delta)));
+  };
   const factor =
     selected === "NGFW-02"
       ? 1
@@ -430,10 +484,22 @@ export function App() {
           )}
         </div>
       </header>
-      <main className={"workspace " + (hideDevices ? "hide-devices" : "")}>
+      <main
+        ref={workspaceRef}
+        className={
+          "workspace " +
+          (hideDevices ? "hide-devices " : "") +
+          (resizing ? "is-resizing" : "")
+        }
+        style={{ "--device-list-width": devicePaneWidth + "px" }}
+      >
         {!hideDevices && (
           <>
-            <aside className="device-list" aria-label="Devices">
+            <aside
+              className={"device-list " + (tableMode ? "table-mode" : "card-mode")}
+              aria-label="Devices"
+              data-layout={tableMode ? "table" : "cards"}
+            >
               <div className="device-actions">
                 <IconButton
                   name="plus16"
@@ -484,35 +550,112 @@ export function App() {
                   onChange={(e) => setSearch(e.target.value)}
                 />
               )}
-              <div className="device-items">
-                {filtered.map((n) => (
-                  <button
-                    className={
-                      "device-item " + (n === selected ? "selected" : "")
-                    }
-                    key={n}
-                    onClick={() => setSelected(n)}
-                    aria-pressed={n === selected}
-                  >
-                    <div className="device-name">
-                      <Icon
-                        name={
-                          n.startsWith("Cluster") ? "cluster24-2" : "device24"
-                        }
-                        size={24}
-                      />
-                      <strong>{n}</strong>
+              {tableMode ? (
+                <div className="device-table-scroll">
+                  <div className="device-table" role="table" aria-label="Device details">
+                    <div className="device-table-head" role="rowgroup">
+                      <span className="content-updates">Content updates</span>
+                      {deviceTableColumns.map((column, index) => (
+                        <span
+                          className={
+                            (index < 4 || index > 7 ? "ungrouped " : "") +
+                            (index === 0 ? "first-column" : "")
+                          }
+                          style={{ "--column": index + 1 }}
+                          role="columnheader"
+                          key={column}
+                        >
+                          {column}
+                        </span>
+                      ))}
                     </div>
-                    <div className="device-sub">
-                      <span>pt-ngfw-vm-1010</span>
-                      <span className="status">
-                        <img src={asset("Badge")} width="6" height="6" alt="" />
-                        Connected
-                      </span>
+                    <div className="device-table-body" role="rowgroup">
+                      {filtered.map((n) => {
+                        const row = [
+                          n,
+                          "Connected",
+                          "pt-ngfw-vm-1010",
+                          "10.12.100.71",
+                          "",
+                          "",
+                          "",
+                          "",
+                          "1.12.1",
+                          "3.4.1.234",
+                          "12 jun, 11:11",
+                        ];
+                        return (
+                          <button
+                            className={
+                              "device-table-row " +
+                              (n === selected ? "selected" : "")
+                            }
+                            role="row"
+                            key={n}
+                            onClick={() => setSelected(n)}
+                            aria-pressed={n === selected}
+                          >
+                            {row.map((value, index) => (
+                              <span className="device-table-cell" role="cell" key={index}>
+                                {index === 0 && (
+                                  <Icon
+                                    name={
+                                      n.startsWith("Cluster")
+                                        ? "cluster24-2"
+                                        : "device24"
+                                    }
+                                    size={24}
+                                  />
+                                )}
+                                {index === 1 && (
+                                  <img
+                                    src={asset("Badge")}
+                                    width="6"
+                                    height="6"
+                                    alt=""
+                                  />
+                                )}
+                                <span>{value}</span>
+                              </span>
+                            ))}
+                          </button>
+                        );
+                      })}
                     </div>
-                  </button>
-                ))}
-              </div>
+                    <div className="device-table-footer">{filtered.length} in total</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="device-items">
+                  {filtered.map((n) => (
+                    <button
+                      className={
+                        "device-item " + (n === selected ? "selected" : "")
+                      }
+                      key={n}
+                      onClick={() => setSelected(n)}
+                      aria-pressed={n === selected}
+                    >
+                      <div className="device-name">
+                        <Icon
+                          name={
+                            n.startsWith("Cluster") ? "cluster24-2" : "device24"
+                          }
+                          size={24}
+                        />
+                        <strong>{n}</strong>
+                      </div>
+                      <div className="device-sub">
+                        <span>pt-ngfw-vm-1010</span>
+                        <span className="status">
+                          <img src={asset("Badge")} width="6" height="6" alt="" />
+                          Connected
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
               {filtered.length === 0 && (
                 <div className="empty">
                   <strong>No devices found</strong>
@@ -529,7 +672,31 @@ export function App() {
                 </div>
               )}
             </aside>
-            <div className="splitter">
+            <div
+              className="splitter"
+              role="separator"
+              aria-label="Resize device list"
+              aria-orientation="vertical"
+              aria-valuemin="180"
+              aria-valuemax={Math.round(getDevicePaneMax())}
+              aria-valuenow={Math.round(devicePaneWidth)}
+              tabIndex="0"
+              onPointerDown={(e) => {
+                if (e.button !== 0) return;
+                e.preventDefault();
+                setResizing(true);
+              }}
+              onDoubleClick={() => setDevicePaneWidth(240)}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowLeft") resizeDevicePaneBy(-16);
+                else if (e.key === "ArrowRight") resizeDevicePaneBy(16);
+                else if (e.key === "Home") setDevicePaneWidth(180);
+                else if (e.key === "End")
+                  resizeDevicePaneBy(viewportWidth);
+                else return;
+                e.preventDefault();
+              }}
+            >
               <Icon name="splitter16" />
             </div>
           </>
