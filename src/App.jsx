@@ -81,6 +81,80 @@ const counters = [
   ["Virtual routers", 0],
   ["Virtual wires", 2],
 ];
+const interfaceColumns = [
+  "Name",
+  "Admin state",
+  "State",
+  "Type",
+  "VLAN ID",
+  "LAG interface",
+  "Virtual context",
+  "Mode",
+];
+const initialInterfaceRows = [
+  { id: "ae1", name: "ae1", group: true, state: "Pending", type: "LAG interface", detail: "2 interfaces" },
+  { id: "ae1.0", name: "ae1.0", parent: "ae1", admin: "Enabled", state: "Pending", type: "Subinterface", vlan: "Untagged", context: "Default", mode: "Routing" },
+  { id: "ae1.1", name: "ae1.1", parent: "ae1", admin: "Enabled", state: "Pending", type: "Subinterface", vlan: "1", context: "Default", mode: "Routing" },
+  { id: "eth1-1", name: "eth1-1", group: true, state: "Pending", type: "Interface" },
+  { id: "eth1-1.0", name: "eth1-1.0", parent: "eth1-1", admin: "Enabled", state: "Pending", type: "Subinterface", vlan: "Untagged", context: "Default", mode: "Routing" },
+  { id: "eth1-1.1", name: "eth1-1.1", parent: "eth1-1", admin: "Enabled", state: "Pending", type: "Subinterface", vlan: "1", context: "Default", mode: "Routing" },
+  { id: "eth1-1.2", name: "eth1-1.2", parent: "eth1-1", admin: "Enabled", state: "Pending", type: "Subinterface", vlan: "2", context: "Default", mode: "Decryption" },
+  { id: "eth1-1.3", name: "eth1-1.3", parent: "eth1-1", admin: "Enabled", state: "Unavailable", type: "Subinterface", vlan: "3", context: "Default", mode: "vWire" },
+  { id: "eth1-2", name: "eth1-2", group: true, state: "Up", type: "LAG member" },
+  { id: "eth2-1", name: "eth2-1", group: true, state: "Pending", type: "LAG member" },
+  { id: "eth2-2", name: "eth2-2", group: true, state: "Pending", type: "Interface" },
+  { id: "eth2-2.0", name: "eth2-2.0", parent: "eth2-2", admin: "Enabled", state: "Pending", type: "Subinterface", vlan: "Untagged", context: "Default", mode: "Routing" },
+  { id: "eth2-2.1", name: "eth2-2.1", parent: "eth2-2", admin: "Enabled", state: "Pending", type: "Subinterface", vlan: "1", context: "Default", mode: "Routing" },
+  { id: "tunnels", name: "Tunnel interfaces", group: true, type: "Tunnel" },
+  { id: "tunnel-1", name: "Tunnel interface 1", parent: "tunnels", admin: "Enabled", type: "GRE", mode: "Routing" },
+  { id: "tunnel-2", name: "Tunnel interface 2", parent: "tunnels", admin: "Enabled", state: "Off", type: "IPsec Site-to-Site", mode: "Routing" },
+];
+function getInterfaceRows(device) {
+  if (device === "NGFW-02") return initialInterfaceRows;
+  if (device.startsWith("Cluster")) {
+    return [
+      { id: "cluster-bond", name: "ae2", group: true, state: "Up", type: "LAG interface", detail: "3 interfaces" },
+      { id: "cluster-bond-0", name: "ae2.10", parent: "cluster-bond", admin: "Enabled", state: "Up", type: "Subinterface", vlan: "10", context: "Default", mode: "Routing" },
+      { id: "cluster-bond-1", name: "ae2.20", parent: "cluster-bond", admin: "Enabled", state: "Up", type: "Subinterface", vlan: "20", context: "Default", mode: "Routing" },
+      { id: "cluster-bond-2", name: "ae2.99", parent: "cluster-bond", admin: "Enabled", state: "Pending", type: "Subinterface", vlan: "99", context: "Management", mode: "Routing" },
+      { id: "cluster-ha", name: "eth2-1", group: true, state: "Up", type: "Cluster link", detail: "2 interfaces" },
+      { id: "cluster-ha-1", name: "eth2-1.0", parent: "cluster-ha", admin: "Enabled", state: "Up", type: "Heartbeat", mode: "Cluster" },
+      { id: "cluster-ha-2", name: "eth2-1.1", parent: "cluster-ha", admin: "Enabled", state: "Up", type: "Synchronization", mode: "Cluster" },
+      { id: "cluster-mgmt", name: "eth2-2", group: true, state: "Pending", type: "Management" },
+      { id: "cluster-tunnels", name: "Tunnel interfaces", group: true, type: "Tunnel" },
+      { id: "cluster-gre", name: "gre-cluster-2-1", parent: "cluster-tunnels", admin: "Enabled", state: "Up", type: "GRE", mode: "Routing" },
+      { id: "cluster-ipsec", name: "ipsec-branch-2", parent: "cluster-tunnels", admin: "Enabled", state: "Off", type: "IPsec Site-to-Site", mode: "Routing" },
+    ];
+  }
+  const number = Number(device.match(/\d+/)?.[0] || 1);
+  const lagId = `ae-${number}`;
+  const ethernetId = `ethernet-${number}`;
+  const uplinkId = `uplink-${number}`;
+  const tunnelId = `tunnels-${number}`;
+  const ethernetChildren = Array.from({ length: 1 + (number % 3) }, (_, index) => ({
+    id: `${ethernetId}-${index}`,
+    name: `eth${number}-1.${index}`,
+    parent: ethernetId,
+    admin: "Enabled",
+    state: index === number % 3 ? "Unavailable" : number % 2 ? "Up" : "Pending",
+    type: "Subinterface",
+    vlan: index === 0 ? "Untagged" : String(number * 10 + index),
+    context: index === 2 ? `Tenant-${number}` : "Default",
+    mode: index === 2 ? "Decryption" : "Routing",
+  }));
+  return [
+    { id: lagId, name: `ae${number}`, group: true, state: number % 2 ? "Up" : "Pending", type: "LAG interface", detail: `${number % 2 ? 3 : 2} interfaces` },
+    { id: `${lagId}-0`, name: `ae${number}.0`, parent: lagId, admin: "Enabled", state: number % 2 ? "Up" : "Pending", type: "Subinterface", vlan: "Untagged", context: "Default", mode: "Routing" },
+    ...(number % 2 ? [{ id: `${lagId}-1`, name: `ae${number}.100`, parent: lagId, admin: "Enabled", state: "Pending", type: "Subinterface", vlan: String(number * 100), context: `Tenant-${number}`, mode: "Routing" }] : []),
+    { id: ethernetId, name: `eth${number}-1`, group: true, state: number === 5 ? "Unavailable" : "Pending", type: "Interface" },
+    ...ethernetChildren,
+    { id: uplinkId, name: `eth${number}-2`, group: true, state: number % 2 ? "Up" : "Pending", type: number % 2 ? "LAG member" : "Interface" },
+    { id: `${uplinkId}-0`, name: `eth${number}-2.0`, parent: uplinkId, admin: number === 6 ? "Off" : "Enabled", state: number === 6 ? "Off" : "Up", type: "Subinterface", vlan: String(200 + number), context: "Default", mode: number === 4 ? "vWire" : "Routing" },
+    { id: tunnelId, name: "Tunnel interfaces", group: true, type: "Tunnel" },
+    { id: `${tunnelId}-gre`, name: `gre-${device.toLowerCase()}`, parent: tunnelId, admin: "Enabled", state: number % 2 ? "Up" : "Pending", type: "GRE", mode: "Routing" },
+    ...(number > 3 ? [{ id: `${tunnelId}-ipsec`, name: `ipsec-branch-${number}`, parent: tunnelId, admin: "Enabled", state: number === 6 ? "Unavailable" : "Off", type: "IPsec Site-to-Site", mode: "Routing" }] : []),
+  ];
+}
 function MainBar({ collapsed, onCollapse }) {
   return (
     <aside
@@ -139,18 +213,22 @@ function MainBar({ collapsed, onCollapse }) {
     </aside>
   );
 }
-function DeviceNavigation({ collapsed, onCollapse, onInfo }) {
-  const [closed, setClosed] = useState({});
+function DeviceNavigation({ collapsed, onCollapse, onInfo, active, onNavigate }) {
+  const [closed, setClosed] = useState(() =>
+    Object.fromEntries(
+      groups.filter((group) => group.children).map((group) => [group.name, true]),
+    ),
+  );
   return (
     <nav
       className={"device-nav " + (collapsed ? "narrow" : "")}
       aria-label="Device navigation"
     >
-      <div className="nav-summary">
-        <span>
+      <div className={"nav-summary " + (active === "Summary" ? "active" : "")}>
+        <button onClick={() => onNavigate("Summary")} aria-current={active === "Summary" ? "page" : undefined}>
           <Icon name="zone16" />
           {!collapsed && "Summary"}
-        </span>
+        </button>
         <IconButton
           name="collapse16"
           label={
@@ -170,12 +248,15 @@ function DeviceNavigation({ collapsed, onCollapse, onInfo }) {
                 key={g.name}
               >
                 <button
-                  className="nav-row"
+                  className={"nav-row " + (active === g.name ? "active" : "")}
                   onClick={() =>
                     g.children
                       ? setClosed({ ...closed, [g.name]: !closed[g.name] })
-                      : onInfo(g.name)
+                      : g.name === "Interfaces"
+                        ? onNavigate("Interfaces")
+                        : onInfo(g.name)
                   }
+                  aria-current={active === g.name ? "page" : undefined}
                   aria-expanded={g.children ? !closed[g.name] : undefined}
                 >
                   <Icon name="superadmin16" />
@@ -211,6 +292,83 @@ function DeviceNavigation({ collapsed, onCollapse, onInfo }) {
         </>
       )}
     </nav>
+  );
+}
+
+function StatusBadge({ value }) {
+  if (!value) return null;
+  const tone = value === "Enabled" || value === "Up" ? "success" : value === "Unavailable" ? "danger" : value === "Pending" ? "warning" : "neutral";
+  return <span className={"state-badge " + tone}><span aria-hidden="true" />{value}</span>;
+}
+
+function InterfacesScreen({ device, search, onSearch, onAction, onExpand }) {
+  const [activeTab, setActiveTab] = useState("Section 1");
+  const [collapsed, setCollapsed] = useState({});
+  useEffect(() => setCollapsed({}), [device]);
+  const interfaceRows = getInterfaceRows(device);
+  const parentIds = new Set(
+    interfaceRows.filter((row) => row.parent).map((row) => row.parent),
+  );
+  const visibleRows = interfaceRows.filter((row) => {
+    if (row.parent && collapsed[row.parent]) return false;
+    return !search || row.name.toLowerCase().includes(search.toLowerCase()) || row.parent?.toLowerCase().includes(search.toLowerCase());
+  });
+  return (
+    <div className="interfaces-screen">
+      <div className="interface-tabs" role="tablist" aria-label="Interface sections">
+        {["Section 1", "Section 2", "Section 3", "Section 4", "Section 5"].map((tab) => (
+          <button key={tab} role="tab" aria-selected={activeTab === tab} className={activeTab === tab ? "active" : ""} onClick={() => setActiveTab(tab)}>{tab}</button>
+        ))}
+      </div>
+      <div className="interface-actions">
+        <button className="interface-add" onClick={() => onAction("Add interface")}><Icon name="plus16" />Add</button>
+        <span className="action-separator" />
+        {["{Label}", "{Label}", "{Label}"].map((label, index) => (
+          <button className="interface-secondary" key={index} onClick={() => onAction(label)}><Icon name="plus16" />{label}</button>
+        ))}
+        <div className="interface-tools">
+          <IconButton name="FilterIcon" label="Filter interfaces" onClick={() => onAction("Filter interfaces")} />
+          <IconButton name="search" label="Search interfaces" onClick={() => document.getElementById("interface-search")?.focus()} />
+          <label className="interface-search">
+            <Icon name="search" />
+            <input id="interface-search" aria-label="Search interfaces" placeholder="Search" value={search} onChange={(event) => onSearch(event.target.value)} />
+          </label>
+          <span className="action-separator" />
+          <IconButton name="expand16" label="Expand table" onClick={onExpand} />
+          <IconButton name="settings16" label="Table settings" onClick={() => onAction("Table settings")} />
+          <IconButton name="Menu_new" label="Table columns" onClick={() => onAction("Table columns")} />
+        </div>
+      </div>
+      <div className="interfaces-table-scroll">
+        <div className="interfaces-table" role="table" aria-label="Interfaces">
+          <div className="interfaces-head" role="row">
+            {interfaceColumns.map((column) => <span role="columnheader" key={column}>{column}</span>)}
+          </div>
+          <div role="rowgroup">
+            {visibleRows.map((row) => (
+              <div className={"interface-row " + (row.parent ? "child" : "group")} role="row" key={row.id}>
+                <span className="interface-name" role="cell">
+                  {row.group && parentIds.has(row.id) ? (
+                    <button aria-label={(collapsed[row.id] ? "Expand " : "Collapse ") + row.name} aria-expanded={!collapsed[row.id]} onClick={() => setCollapsed({ ...collapsed, [row.id]: !collapsed[row.id] })}>
+                      <Icon name="chevronDown16" className={collapsed[row.id] ? "rotated" : ""} />
+                    </button>
+                  ) : <span className="interface-indent" />}
+                  <Icon name="interface16" />
+                  <strong>{row.name}</strong>
+                </span>
+                <span role="cell"><StatusBadge value={row.admin} /></span>
+                <span role="cell"><StatusBadge value={row.state} /></span>
+                <span className="interface-type" role="cell"><span>{row.type}</span>{row.detail && <small>{row.detail}</small>}</span>
+                <span role="cell">{row.vlan}</span>
+                <span role="cell">{row.lag}</span>
+                <span role="cell">{row.context && <span className="virtual-context"><Icon name="hierarhy" />{row.context}</span>}</span>
+                <span role="cell">{row.mode}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 function Dialog({ title, children, onClose }) {
@@ -276,6 +434,10 @@ export function App() {
   const [devices, setDevices] = useState(initialDevices),
     [selected, setSelected] = useState("NGFW-02"),
     [search, setSearch] = useState("");
+  const [currentSection, setCurrentSection] = useState(() =>
+      window.location.hash === "#interfaces" ? "Interfaces" : "Summary",
+    ),
+    [interfaceSearch, setInterfaceSearch] = useState("");
   const [localSearch, setLocalSearch] = useState(false),
     [sort, setSort] = useState(false),
     [type, setType] = useState("all");
@@ -299,7 +461,21 @@ export function App() {
       setError("");
     };
   const getDevicePaneMax = () =>
-    Math.max(180, (workspaceRef.current?.clientWidth ?? viewportWidth) - 496);
+    Math.max(240, (workspaceRef.current?.clientWidth ?? viewportWidth) - 496);
+  const navigateTo = (section) => {
+    setCurrentSection(section);
+    window.history.replaceState(null, "", section === "Interfaces" ? "#interfaces" : window.location.pathname + window.location.search);
+  };
+  useEffect(() => {
+    function syncSection() {
+      setCurrentSection(window.location.hash === "#interfaces" ? "Interfaces" : "Summary");
+    }
+    window.addEventListener("hashchange", syncSection);
+    return () => window.removeEventListener("hashchange", syncSection);
+  }, []);
+  useEffect(() => {
+    document.title = currentSection === "Interfaces" ? "TT NGFW — Interfaces" : "TT NGFW — Device Overview";
+  }, [currentSection]);
   useEffect(() => {
     function key(e) {
       if (e.key === "Escape") {
@@ -342,8 +518,8 @@ export function App() {
     function move(e) {
       const rect = workspaceRef.current?.getBoundingClientRect();
       if (!rect) return;
-      const max = Math.max(180, rect.width - 496);
-      setDevicePaneWidth(Math.min(max, Math.max(180, e.clientX - rect.left)));
+      const max = Math.max(240, rect.width - 496);
+      setDevicePaneWidth(Math.min(max, Math.max(240, e.clientX - rect.left)));
     }
     function stop() {
       setResizing(false);
@@ -369,13 +545,17 @@ export function App() {
   const tableMode = viewportWidth > 600 && devicePaneWidth >= viewportWidth * 0.3;
   const resizeDevicePaneBy = (delta) => {
     const max = getDevicePaneMax();
-    setDevicePaneWidth((width) => Math.min(max, Math.max(180, width + delta)));
+    setDevicePaneWidth((width) => Math.min(max, Math.max(240, width + delta)));
   };
   const factor =
     selected === "NGFW-02"
       ? 1
       : 0.74 + (Math.max(0, devices.indexOf(selected) - 2) + 1) * 0.08;
   const info = (name) => setDialog({ kind: "info", title: name });
+  const selectDevice = (name) => {
+    setSelected(name);
+    setInterfaceSearch("");
+  };
   const addDevice = (e) => {
     e.preventDefault();
     const value = deviceName.trim();
@@ -592,7 +772,7 @@ export function App() {
                             }
                             role="row"
                             key={n}
-                            onClick={() => setSelected(n)}
+                            onClick={() => selectDevice(n)}
                             aria-pressed={n === selected}
                           >
                             {row.map((value, index) => (
@@ -633,7 +813,7 @@ export function App() {
                         "device-item " + (n === selected ? "selected" : "")
                       }
                       key={n}
-                      onClick={() => setSelected(n)}
+                      onClick={() => selectDevice(n)}
                       aria-pressed={n === selected}
                     >
                       <div className="device-name">
@@ -677,7 +857,7 @@ export function App() {
               role="separator"
               aria-label="Resize device list"
               aria-orientation="vertical"
-              aria-valuemin="180"
+              aria-valuemin="240"
               aria-valuemax={Math.round(getDevicePaneMax())}
               aria-valuenow={Math.round(devicePaneWidth)}
               tabIndex="0"
@@ -690,7 +870,7 @@ export function App() {
               onKeyDown={(e) => {
                 if (e.key === "ArrowLeft") resizeDevicePaneBy(-16);
                 else if (e.key === "ArrowRight") resizeDevicePaneBy(16);
-                else if (e.key === "Home") setDevicePaneWidth(180);
+                else if (e.key === "Home") setDevicePaneWidth(240);
                 else if (e.key === "End")
                   resizeDevicePaneBy(viewportWidth);
                 else return;
@@ -709,36 +889,54 @@ export function App() {
         )}
         <section
           className={"device-panel " + (expanded ? "expanded" : "")}
-          aria-label={selected + " overview"}
+          aria-label={selected + " " + currentSection.toLowerCase()}
         >
-          <div className="panel-header">
-            <div className="device-title">
-              <h2>
-                <Icon name="device-dark" size={24} />
-                {selected}
-              </h2>
-              <span className="status">
-                <img src={asset("Badge")} width="6" height="6" alt="" />
-                Connected
-              </span>
-            </div>
-            <div className="counter-pills">
-              {counters.map(([name, value], i) => (
-                <button
-                  className={"counter-pill " + (i === 0 ? "first" : "")}
-                  key={name}
-                  onClick={() => info(name)}
-                >
-                  {name}
-                  <span className={"badge " + (value === 0 ? "muted" : "")}>
-                    {value}
+          <div className={"panel-header " + (currentSection === "Interfaces" ? "interface-header" : "")}>
+            {currentSection === "Interfaces" ? (
+              <div className="interface-heading">
+                <IconButton name="chevronDown16" className="back-icon" label="Back to summary" onClick={() => navigateTo("Summary")} />
+                <span className="heading-separator" />
+                <div className="device-title muted-device">
+                  <h2><Icon name="device-dark" size={24} />{selected}</h2>
+                  <span className="status"><img src={asset("Badge")} width="6" height="6" alt="" />Connected</span>
+                </div>
+                <Icon name="chevronDown16" className="forward-icon" />
+                <div className="section-title">
+                  <h2><Icon name="interface16" size={24} />Interfaces</h2>
+                  <span>xsaxsxs</span>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="device-title">
+                  <h2>
+                    <Icon name="device-dark" size={24} />
+                    {selected}
+                  </h2>
+                  <span className="status">
+                    <img src={asset("Badge")} width="6" height="6" alt="" />
+                    Connected
                   </span>
-                </button>
-              ))}
-            </div>
+                </div>
+                <div className="counter-pills">
+                  {counters.map(([name, value], i) => (
+                    <button
+                      className={"counter-pill " + (i === 0 ? "first" : "")}
+                      key={name}
+                      onClick={() => info(name)}
+                    >
+                      {name}
+                      <span className={"badge " + (value === 0 ? "muted" : "")}>
+                        {value}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
             <IconButton
               name="expand16"
-              label={expanded ? "Restore overview" : "Expand overview"}
+              label={expanded ? "Restore panel" : "Expand panel"}
               onClick={() => setExpanded(!expanded)}
             />
           </div>
@@ -748,8 +946,12 @@ export function App() {
               collapsed={navCollapsed}
               onCollapse={() => setNavCollapsed(!navCollapsed)}
               onInfo={info}
+              active={currentSection}
+              onNavigate={navigateTo}
             />
-            <div className="dashboard" key={selected}>
+            {currentSection === "Interfaces" ? (
+              <InterfacesScreen device={selected} search={interfaceSearch} onSearch={setInterfaceSearch} onAction={(action) => setToast(action)} onExpand={() => setExpanded(true)} />
+            ) : <div className="dashboard" key={selected}>
               <section className="metrics" aria-label="Key metrics">
                 {[
                   ["Views", 7265, "+11.01%"],
@@ -830,7 +1032,7 @@ export function App() {
                 </article>
                 <Locations />
               </div>
-            </div>
+            </div>}
           </div>
         </section>
       </main>

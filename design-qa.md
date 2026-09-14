@@ -1,4 +1,4 @@
-# Design QA — TT NGFW device overview
+# Design QA — TT NGFW device overview and Interfaces
 
 final result: passed
 
@@ -49,5 +49,40 @@ No remaining actionable P0/P1/P2 findings in the reviewed states.
 - Prototype only: no real device connections, authentication, API or persistence.
 - Data in alternate states and tooltips is illustrative, as the Figma file provides visual examples rather than datasets.
 - P3: small font rasterization differences and minor chip/badge spacing can be tuned against a production design system.
-- Only the selected overview screen is implemented. Neighboring sections have summary dialogs, not full configuration pages.
+- The Overview and Interfaces screens are implemented. Other configuration sections still use summary dialogs.
 - Tests do not cover every browser, screen-reader combination or intermediate responsive width.
+
+## Interfaces screen QA — 2026-09-13
+
+### Evidence
+
+- Source visual truth: Figma node `40013082:133206`; `docs/qa/figma-interfaces.png`, 1920 × 1200 at 1× density.
+- Rendered implementation: `http://localhost:5173/#interfaces`, captured in the Codex in-app Browser at 1920 × 1200 and at the user's 952 × 942 viewport. The browser API exposes these captures as inline task artifacts rather than filesystem paths.
+- State: light theme, NGFW-02 selected for the source comparison, Section 1 active, all interface groups expanded, device-list width 240 px.
+- Full-view comparison: the 1920 × 1200 browser capture and source were inspected together. MainBar, toolbar, 240 px device list, splitter, device header, 240 px DeviceNavigation, tabs, action bar and interface table align to the same major guides.
+- Focused comparison: the header transition, active Interfaces row, tabs, action buttons, table header, hierarchical rows and status badges were readable in both artifacts. Separate crops were unnecessary because the 1× full-view captures preserved readable UI text and controls.
+
+### Findings and comparison history
+
+- Initial P2: the action bar left only 72 px between tabs and table, placing its controls and table 4–8 px above the Figma guides. Increased the action-bar track to 80 px; the post-fix 1920 × 1200 capture aligns the button center and table start with the source.
+- Initial P2: the splitter allowed the device list to shrink to 180 px. Raised pointer, keyboard and ARIA minimums to 240 px. Browser verification reports `width: 240`, `aria-valuemin: 240`, and retains the card layout at the minimum.
+- No remaining actionable P0/P1/P2 findings in the reviewed Interfaces states.
+
+### Required fidelity surfaces
+
+- Typography: local Inter 400/600 matches the source hierarchy at 24, 14 and 12 px; labels, rows and badge weights remain readable at both reviewed widths.
+- Spacing and layout: major 1920 × 1200 guides match; 16 px panel gaps, 20 px radii, 40 px tabs, 80 px action region and 40 px data rows follow the Figma component geometry. At 952 px, the action bar and table scroll horizontally inside the content pane.
+- Colors and tokens: neutral surfaces, selected blue device row, selected gray Interfaces row, blue active tab, and green/yellow/red/gray statuses match the supplied palette.
+- Image quality: logo, avatar and icons reuse the existing Figma-exported SVG/PNG assets; no temporary Figma asset URLs are used by the application.
+- Copy and content: Figma column labels, placeholder tab/action labels, NGFW-02 row data and header subtitle are retained. Other devices use clearly distinct illustrative datasets by request.
+
+### Browser interactions checked
+
+- Interfaces opens from DeviceNavigation and the back control restores Summary; URL state changes between `/` and `#interfaces`.
+- Section tabs change selection; search narrows the interface dataset; hierarchy controls collapse and restore child rows.
+- Every device produces a distinct interface dataset. Verified row counts: NGFW-01 10, Cluster-2-1 11, NGFW-02 16, NGFW-03 9, NGFW-04 10, NGFW-05 12, NGFW-06 9. Names and statuses also change per device.
+- The device-list splitter stops at 240 px. At its maximum on a 1920 px viewport, the list switches to the Figma table variant; Home restores the 240 px card variant.
+- Interface table scroll width exceeds its content viewport at 952 px, keeping all columns reachable.
+- No application console errors were observed. Production build and all four Sites tests passed.
+
+final result: passed

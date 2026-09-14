@@ -13,3 +13,10 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 - Keep the DeviceNavigation summary and collapse control pinned to the top of its scrolling navigation panel.
 - Treat the divider between the device list and overview as a draggable splitter. Resize both panes continuously, support keyboard resizing, and preserve a usable minimum width for the overview.
 - When the device-list pane reaches 30% of the viewport width, switch it from the compact `Adaptive=On` cards to the Figma `Adaptive=Off` table variant. Switch back below that threshold.
+- Keep the device-list pane at least 240 px wide when it is resized with the splitter or keyboard.
+- Give every device a distinct illustrative Interfaces dataset so changing the selected device visibly changes interface names, groups, statuses, types and row count.
+- Load every expandable DeviceNavigation group collapsed; users open the groups they need.
+- Show a disclosure chevron in the Interfaces table only when that interface has child rows.
+- Keep icons in outlined interface action buttons dark enough to match the Figma controls against a white background.
+- Base dashboard breakpoints on the dashboard pane width so dragging the device-list splitter triggers the same responsive reflow as resizing the browser window.
+- Use the red TT logo from `public/assets/logo.svg` as the browser favicon.
