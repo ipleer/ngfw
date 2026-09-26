@@ -164,15 +164,13 @@ function MainBar({ collapsed, onCollapse }) {
       <div>
         <div className="brand">
           <img src={asset("logo")} width="24" height="24" alt="TT NGFW" />
-          {!collapsed && (
-            <img
-              className="wordmark"
-              src={asset("wordmark")}
-              width="86.44"
-              height="13.68"
-              alt=""
-            />
-          )}
+          <img
+            className="wordmark"
+            src={asset("wordmark")}
+            width="86.44"
+            height="13.68"
+            alt=""
+          />
           <IconButton
             name="panel16"
             label={
@@ -190,7 +188,7 @@ function MainBar({ collapsed, onCollapse }) {
               aria-current={n === "Devices" ? "page" : undefined}
             >
               <Icon name={n === "Devices" ? "device16" : "superadmin16"} />
-              {!collapsed && <span>{n}</span>}
+              <span>{n}</span>
             </div>
           ))}
         </div>
@@ -199,7 +197,7 @@ function MainBar({ collapsed, onCollapse }) {
         {["Push to device", "Lock system", "Admin"].map((n) => (
           <div title={n} key={n} className="main-link">
             <Icon name="superadmin16" />
-            {!collapsed && <span>{n}</span>}
+            <span>{n}</span>
           </div>
         ))}
         <img
@@ -221,26 +219,31 @@ function DeviceNavigation({ collapsed, onCollapse, onInfo, active, onNavigate })
   );
   return (
     <nav
-      className={"device-nav " + (collapsed ? "narrow" : "")}
+      className={"device-nav " + (collapsed ? "narrow" : "expanded")}
       aria-label="Device navigation"
     >
-      <div className={"nav-summary " + (active === "Summary" ? "active" : "")}>
-        <button onClick={() => onNavigate("Summary")} aria-current={active === "Summary" ? "page" : undefined}>
-          <Icon name="zone16" />
-          {!collapsed && "Summary"}
-        </button>
+      <div className="compact-nav-content" aria-hidden={!collapsed}>
         <IconButton
-          name="collapse16"
-          label={
-            collapsed
-              ? "Expand device navigation"
-              : "Collapse device navigation"
-          }
+          name="settings16"
+          className="compact-nav-toggle"
+          label="Expand device navigation"
           onClick={onCollapse}
+          tabIndex={collapsed ? undefined : -1}
         />
       </div>
-      {!collapsed && (
-        <>
+      <div className="expanded-nav-content" aria-hidden={collapsed}>
+        <div className={"nav-summary " + (active === "Summary" ? "active" : "")}>
+          <button onClick={() => onNavigate("Summary")} aria-current={active === "Summary" ? "page" : undefined} tabIndex={collapsed ? -1 : undefined}>
+            <Icon name="zone16" />
+            Summary
+          </button>
+          <IconButton
+            name="collapse16"
+            label="Collapse device navigation"
+            onClick={onCollapse}
+            tabIndex={collapsed ? -1 : undefined}
+          />
+        </div>
           <div className="nav-groups">
             {groups.map((g) => (
               <div
@@ -258,6 +261,7 @@ function DeviceNavigation({ collapsed, onCollapse, onInfo, active, onNavigate })
                   }
                   aria-current={active === g.name ? "page" : undefined}
                   aria-expanded={g.children ? !closed[g.name] : undefined}
+                  tabIndex={collapsed ? -1 : undefined}
                 >
                   <Icon name="superadmin16" />
                   <span>{g.name}</span>
@@ -268,29 +272,34 @@ function DeviceNavigation({ collapsed, onCollapse, onInfo, active, onNavigate })
                     />
                   )}
                 </button>
-                {g.children && !closed[g.name] && (
-                  <div className="nav-children">
-                    {g.children.map((c) => (
-                      <button
-                        className="nav-child"
-                        key={c}
-                        onClick={() => onInfo(c)}
-                      >
-                        <Icon name="interface16" />
-                        {c}
-                      </button>
-                    ))}
+                {g.children && (
+                  <div
+                    className={"nav-children-motion " + (closed[g.name] ? "closed" : "open")}
+                    aria-hidden={closed[g.name]}
+                  >
+                    <div className="nav-children">
+                      {g.children.map((c) => (
+                        <button
+                          className="nav-child"
+                          key={c}
+                          onClick={() => onInfo(c)}
+                          tabIndex={collapsed || closed[g.name] ? -1 : undefined}
+                        >
+                          <Icon name="interface16" />
+                          {c}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
             ))}
           </div>
-          <button className="nav-row system" onClick={() => onInfo("System")}>
+          <button className="nav-row system" onClick={() => onInfo("System")} tabIndex={collapsed ? -1 : undefined}>
             <Icon name="settings16" />
             <span>System</span>
           </button>
-        </>
-      )}
+      </div>
     </nav>
   );
 }
@@ -897,7 +906,13 @@ export function App() {
                 <IconButton name="chevronDown16" className="back-icon" label="Back to summary" onClick={() => navigateTo("Summary")} />
                 <span className="heading-separator" />
                 <div className="device-title muted-device">
-                  <h2><Icon name="device-dark" size={24} />{selected}</h2>
+                  <h2>
+                    <Icon
+                      name={selected.startsWith("Cluster") ? "cluster-dark" : "device-dark"}
+                      size={24}
+                    />
+                    {selected}
+                  </h2>
                   <span className="status"><img src={asset("Badge")} width="6" height="6" alt="" />Connected</span>
                 </div>
                 <Icon name="chevronDown16" className="forward-icon" />
@@ -910,7 +925,10 @@ export function App() {
               <>
                 <div className="device-title">
                   <h2>
-                    <Icon name="device-dark" size={24} />
+                    <Icon
+                      name={selected.startsWith("Cluster") ? "cluster-dark" : "device-dark"}
+                      size={24}
+                    />
                     {selected}
                   </h2>
                   <span className="status">

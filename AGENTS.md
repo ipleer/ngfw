@@ -20,3 +20,12 @@ Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts
 - Keep icons in outlined interface action buttons dark enough to match the Figma controls against a white background.
 - Base dashboard breakpoints on the dashboard pane width so dragging the device-list splitter triggers the same responsive reflow as resizing the browser window.
 - Use the red TT logo from `public/assets/logo.svg` as the browser favicon.
+- Render collapsed DeviceNavigation as the Figma `State=Off` control: a 48 × 48 px card containing only the `settings16` expand button.
+- Animate DeviceNavigation between its expanded and collapsed states over 240 ms, cross-fading the two control sets and honoring `prefers-reduced-motion`.
+- Animate parent navigation groups vertically when their child items expand or collapse; keep the child DOM mounted and remove closed rows from keyboard navigation.
+- Keep Summary metric card dimensions, spacing, and typography fixed. Use four columns when four 190 px cards fit, two columns below 808 px, and one below 396 px.
+- When the main navigation rail is collapsed, expand it as a 240 px overlay on hover and collapse it again on pointer leave without shifting the app grid.
+- Keep the red main-navigation logo vertically stable during hover expansion and use its standard horizontal position beside the wordmark when expanded.
+- Delay main-navigation hover expansion by 180 ms, while keeping pointer-leave collapse immediate.
+- Remove the label gap in collapsed main-navigation rows so each icon is centered by itself; restore the 8 px gap on hover expansion.
+- Use a 48 px collapsed main-navigation rail with 32 px square rows, and hide the expand control until the rail opens on hover.
